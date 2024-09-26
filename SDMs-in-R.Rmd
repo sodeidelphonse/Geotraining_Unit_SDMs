@@ -38,7 +38,7 @@ First we are going to download the climate data from the `Worldclim` website <ht
 
 ```{r}
 # the path where the data should be stored
-data_path <- "data/climate/wc2.1_2.5m" 
+data_path <- "env_data/climate/wc2.1_2.5m" 
 
 # Check if the data already exists
 if (!file.exists(data_path)) {
@@ -59,7 +59,7 @@ if (!file.exists(data_path)) {
 After downloading the environmental data that will be use as covariates in the SDM, we can load the occurrence data.
 
 ```{r}
-obs_data <- read.csv(file = "data/Bidens_bipinnata.csv")
+obs_data <- read.csv(file = "occ_data/Bidens_bipinnata.csv")
 head(obs_data)
 ```
 
