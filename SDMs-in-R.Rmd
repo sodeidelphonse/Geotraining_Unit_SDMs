@@ -1,6 +1,6 @@
 ---
 title: "Species Distribution Modeling in R"
-author: "Sode A.I, Olajide A.Y, Nakhwala L, Opara A, Opoku M, Barasa C.W"
+author: "Olajide A.Y, Nakhwala L, Sode A.I, Opara A, Opoku M, Barasa C.W"
 date: "2024-09-25"
 output:
   html_document: default
@@ -18,7 +18,7 @@ This tutorial present the workflow to build a Species Distribution Model (SDM) f
 
 We used **RMarkdown** which is a simple formatting syntax for authoring HTML, PDF, and MS Word documents (see <http://rmarkdown.rstudio.com>). When you click the **Knit** button, a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
 
-Two types of data are used to build SDM for *B. bipinnata*: occurrence and environmental data. The **occurrence data** are constituted of geographical coordinates (longitude and latitude) of the species. The **environmental data** represent descriptors of the environment, and can include abiotic measurements such as temperature, precipitation, soil types, land cover as well as biotic factors, such as the presence or absence of other species (like predators, competitors, or food sources). In this tutorial, we will focus on climate data.
+Two types of data are used to build SDM for *B. bipinnata*: occurrence and environmental data. The **occurrence data** are constituted of geographical coordinates (longitude and latitude) of the species. The **environmental data** represent descriptors of the environment, and can include abiotic measurements such as temperature, precipitation, soil types, land cover as well as biotic factors, such as the presence or absence of other species (like predators, competitors, or food sources). In this tutorial, we will focus on climate data and land cover.
 
 
 ## Data preparation
@@ -31,68 +31,307 @@ library(geodata)
 library(predicts)
 ```
 
-### Climate data
-
-First we are going to download the climate data from the `Worldclim` website <https://www.worldclim.org/>
-
-
-```{r}
-# the path where the data should be stored
-data_path <- "env_data/climate/wc2.1_2.5m" 
-
-# Check if the data already exists
-if (!file.exists(data_path)) {
-  # data does not exist, download it
-  message("Climate data not found, downloading...")
-  bioclim_data <- worldclim_global(var = "bio",
-                                   res = 2.5,
-                                   path = "data/")
-} else {
-  # data exists, load it or proceed
-  message("Climate data already exists, proceeding...")
-  #bioclim_data <- raster::stack(list.files(data_path, pattern = "\\.bil$", full.names = TRUE))
-}
-```
-
 ### Occurrence data
 
-After downloading the environmental data that will be use as covariates in the SDM, we can load the occurrence data.
+First, we load the occurrence data of *B. bipinnata* observed in Fogo Island.
 
 ```{r}
 obs_data <- read.csv(file = "occ_data/Bidens_bipinnata.csv")
 head(obs_data)
 ```
 
-After loading the data, we get an overview about it
+After loading the data, we get an overview about it.
 ```{r}
 summary(obs_data)
 ```
 
-We drop NAs and make sure they went way before proceeding
+We drop NAs (if applicable) and make sure they went way before proceeding.
 
 ```{r}
 obs_data <- obs_data[!is.na(obs_data$latitude), ]
 summary(obs_data)
 ```
 
-Now, we determine the geographic extent of our data and store it in a single object
+After removing NAs, we create a spatial vector object using the UTM coordinate system.  
 
 ```{r}
-# Determine geographic extent of our data
-max_lat <- ceiling(max(obs_data$latitude))
-min_lat <- floor(min(obs_data$latitude))
-max_lon <- ceiling(max(obs_data$longitude))
-min_lon <- floor(min(obs_data$longitude))
-
-# Store boundaries in a single extent object
-geographic_extent <- ext(x = c(min_lon, max_lon, min_lat, max_lat))
+obs_points <- vect(obs_data, geom = c("longitude", "latitude"), 
+                   crs = "+proj=utm +zone=26 +datum=WGS84 +units=m")
 ```
 
-Also, we need to download the world map to use for our base map
-```{r}
-# Download data with geodata's world function to use for our base map
-world_map <- world(resolution = 3,
-                   path = "data/")
+Then we project the vector data into long/lat to match it with the projection system of the climatic data to be download later.
 
+```{r}
+obs_points <- project(obs_points, "+proj=longlat +datum=WGS84")
+```
+
+
+Before proceeding, it is important to load the Cabo verde map to visualize the data on it.
+
+```{r}
+# Load the map of Cabo verde available as a shapefile.
+map_fogo <- vect("gadm_cpv/fogo_island.shp")
+```
+
+We can plot the observed data on the Fogo map
+
+```{r}
+plot(map_fogo, axes = TRUE, col = "grey95")
+points(x = geom(obs_points)[,"x"], 
+       y = geom(obs_points)[,"y"], 
+       col = "olivedrab", 
+       pch = 20, 
+       cex = 0.8)
+```
+
+
+### Environmental data
+
+After we processed the field data, we are going to download the climate data from the `Worldclim` website <https://www.worldclim.org/>
+
+
+```{r, echo=FALSE}
+# the path where the data should be stored
+data_path <- "env_data/climate/wc2.1_country" 
+
+# Check if the data already exists
+if (!file.exists(data_path)) {
+  # data does not exist, download it
+  message("Climate data not found, downloading...")
+  bioclim_data <- worldclim_country(country = "cabo verde", var = "bio",
+                                   res = 0.5,
+                                   path = "env_data/")
+} else {
+  # data exists, load it and proceed
+  message("Climate data already exists, proceeding...")
+  bioclim_data <- rast(list.files(data_path, pattern = ".tif$", full.names = TRUE))
+}
+```
+
+For simplicity, we will consider only three bioclimatic variables: annual temperature (bio1), temperature seasonality (bio4) and annual precipitation (bio12). 
+
+```{r}
+bioclim <- c(bioclim_data$wc2.1_30s_bio_1, bioclim_data$wc2.1_30s_bio_12, bioclim_data$wc2.1_30s_bio_4)
+```
+
+We extract the bioclimatic variables using the geographic extent of Fogo Island.
+```{r}
+bioclim_crop <- crop(bioclim, map_fogo)
+bioclim_crop
+```
+
+
+We also load our **land cover map** from the module 2 to use it as a covariate in the SDM model.
+
+```{r}
+landcov <- rast("env_data/landcover_model2.tif")
+plot(landcov)
+```
+
+Since all the environmental variables should have the same projection system and resolution, we project the landcover into long/lat system. However, we should be aware that it is not a good practice to project raster layers due to the lack of precision associated with raster layers transformation. 
+
+```{r}
+landcov_ll <- project(landcov, "+proj=longlat +datum=WGS84")
+landcov_ll <- crop(landcov_ll, map_fogo)
+```
+
+Now, we **resample** the land cover raster to have the same resolution with the climate data using the **near** interpolation method recommended for categorical data. Note that the resolution of climate data is lower than the original resolution of land cover.
+
+```{r}
+landcov_res <- resample(landcov_ll, bioclim_crop$wc2.1_30s_bio_1, method = "near")
+landcov_res 
+```
+
+We can now merge the three environmental variables into a raster stack and visualize them.
+
+```{r}
+bioclim_kept        <- c(bioclim_crop, landcov_res)
+names(bioclim_kept) <- c("bio1", "bio4", "bio12", "landcover")
+plot(bioclim_kept)
+```
+
+
+### Pseudo-absence points
+
+In order to evaluate species distribution models with presence-only data, and really understand the factors influencing where *B.bipinnata*  occur, we need to include some absence or “background” points for coercing presence-only data for use with presence/absence approaches.
+
+we then create a set of 500 background (aka pseudo-absence) points at random, and add these to our data. For a large study region with a high resolution environmental data, think about trying 1000 or even 10,000 points.
+
+```{r}
+# Set the seed for the random-number generator to ensure results are similar across users.
+set.seed(12354)
+
+# Randomly sample points (same number as our observed points)
+background <- spatSample(x = bioclim_kept,
+                         size = 500,    # generate 1,000 pseudo-absence points
+                         values = FALSE, # don't need values
+                         na.rm = TRUE,   # don't sample from ocean
+                         xy = TRUE)      # just need coordinates
+
+# Look at the first rows
+head(background)
+```
+```{r}
+# Plot the base map
+plot(map_fogo,
+     axes = TRUE, 
+     col = "grey95")
+
+# Add the background points
+points(background,
+       col = "grey30",
+       pch = 1,
+       cex = 0.75)
+
+# Add the points for individual observations
+points(x = geom(obs_points)[,"x"], 
+       y = geom(obs_points)[,"y"], 
+       col = "olivedrab", 
+       pch = 20, 
+       cex = 0.75)
+```
+
+
+Now, we can create a single dataset for both occurrence and pseudo-absences data. We create an additional column to indicate each type of points.
+
+```{r}
+# Presence-only data
+presence <- as.data.frame(geom(obs_points)[, c("x", "y")])
+colnames(presence) <- c("longitude", "latitude")
+# Add column indicating presence
+presence$pa <- 1
+
+# Convert background data to a data frame
+absence <- as.data.frame(background)
+colnames(absence) <- c("longitude", "latitude")
+# Add column indicating absence
+absence$pa <- 0
+
+# Join data into single data frame
+all_points <- rbind(presence, absence)
+
+# check the results
+head(all_points)
+```
+### Adding climate data
+
+We will use the `extract()` function, which takes geographic coordinates and raster layers as input, and extract values in the raster data for each of the geographic coordinates.
+
+```{r}
+bioclim_extract <- extract(x = bioclim_kept,
+                           y = all_points[, c("longitude", "latitude")],
+                           ID = FALSE) 
+```
+
+We need to join the extracted data with points and drop out the longitude/latitude columns. 
+
+```{r}
+# Add the point and climate datasets together
+points_climate <- cbind(all_points, bioclim_extract)
+
+# Identify columns that are latitude & longitude
+drop_cols <- which(colnames(points_climate) %in% c("longitude", "latitude"))
+drop_cols 
+```
+
+```{r}
+# Remove the geographic coordinates from the data frame
+points_climate <- points_climate[, -drop_cols]
+```
+
+### Training and testing data
+
+After preparing our dataset for the model building, we are going to split it into training and testing samples. We will 80% of the data for training the model and 20% for testing it.
+
+```{r}
+# Create vector indicating fold
+fold <- folds(x = points_climate,
+              k = 5,
+              by = points_climate$pa)
+```
+
+Take a look at each split
+```{r}
+table(fold)
+```
+
+We can used any observations in the fold 1 as test sample and the remaining folds as training set. A more robust approach is the K-flod cross-validation that we used in the module 2 for land covers classification.
+
+```{r}
+testing <- points_climate[fold == 1, ]
+training <- points_climate[fold != 1, ]
+```
+
+
+
+## Model building
+
+Now, it is time to build our SDM. Several SDM approaches are available to handle presence-absence or presence-background data. We will use the generalized linear model which is also known as binary logistic regression model which is popular in machine learning. The column `pa` is the response variable while `.` indicates to the `glm()` that all the the remaining columns should be considered as covariates in the model (i.e. bio1, bio4, bio12 and landcover).
+
+```{r}
+# Build a model using training data
+glm_model <- glm(pa ~ ., data = training, family = binomial())
+```
+
+We can view the significance of covariates
+```{r}
+summary(glm_model)
+```
+
+
+Now that we have built our model, we can use it to predict the habitat suitability across the entire map.
+
+```{r}
+# Get predicted values from the model
+glm_predict <- predict(bioclim_kept, glm_model, type = "response")
+
+# Print predicted values
+plot(glm_predict, main = "Probability of occurrence of B. bipinnata")
+```
+
+
+## Model evaluation
+
+We now take that model, and evaluate it using the observation data and the pseudo-absence points we reserved for model testing. We then use this test to establish a cutoff of occurrence probability to determine the boundaries of the *B. bipinnata* range.
+
+
+```{r}
+# Use testing data for model evaluation
+glm_eval <- pa_evaluate(p = testing[testing$pa == 1, ],
+                        a = testing[testing$pa == 0, ],
+                        model = glm_model,
+                        type = "response")
+```
+
+
+We determine a minimum threshold for the cutoff of the habitat suitability into presence and absence.
+
+```{r}
+# Determine minimum threshold for "presence"
+glm_threshold <- glm_eval@thresholds$max_spec_sens
+```
+
+And finally, we can use that threshold to paint a map with sites predicted to be suitable for the 
+```{r}
+# Plot base map
+plot(map_fogo, 
+     axes = TRUE, 
+     col = "grey95")
+
+# Only plot areas where probability of occurrence is greater than the threshold
+plot(glm_predict > glm_threshold, 
+     add = TRUE, 
+     legend = FALSE, 
+     col = "olivedrab")
+
+# And add those observations
+points(x = geom(obs_points)[,"x"], 
+       y = geom(obs_points)[,"y"], 
+       col = "black",
+       pch = "+", 
+       cex = 0.75)
+
+# Redraw those country borders
+plot(map_fogo, add = TRUE, border = "grey5")
 ```
 
