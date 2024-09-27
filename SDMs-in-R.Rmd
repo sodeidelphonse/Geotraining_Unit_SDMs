@@ -108,7 +108,7 @@ if (!file.exists(data_path)) {
 }
 ```
 
-For simplicity, we will consider only three bioclimatic variables: annual temperature (bio1), temperature seasonality (bio4) and annual precipitation (bio12). 
+For simplicity purpose, we will consider only three bioclimatic variables: annual temperature (bio1), temperature seasonality (bio4) and annual precipitation (bio12). However, users are free to explore variables selection techniques or use expert knowledge to come up with the potential environmental variables that could influence the distribution of *B.bipinnata* in the Fogo Island.
 
 ```{r}
 bioclim <- c(bioclim_data$wc2.1_30s_bio_1, bioclim_data$wc2.1_30s_bio_12, bioclim_data$wc2.1_30s_bio_4)
@@ -128,7 +128,7 @@ landcov <- rast("env_data/landcover_model2.tif")
 plot(landcov)
 ```
 
-Since all the environmental variables should have the same projection system and resolution, we project the landcover into long/lat system. However, we should be aware that it is not a good practice to project raster layers due to the lack of precision associated with raster layers transformation. 
+Since all the environmental variables should have the same projection system and resolution, we project the landcover into long/lat system and cropt it to the Fogo Island extent. However, we should be aware that it is not a good practice to project raster layers due to the lack of precision associated with raster layers transformation. 
 
 ```{r}
 landcov_ll <- project(landcov, "+proj=longlat +datum=WGS84")
@@ -142,7 +142,7 @@ landcov_res <- resample(landcov_ll, bioclim_crop$wc2.1_30s_bio_1, method = "near
 landcov_res 
 ```
 
-We can now merge the three environmental variables into a raster stack and visualize them.
+We can now merge the four environmental variables into a raster stack and visualize them.
 
 ```{r}
 bioclim_kept        <- c(bioclim_crop, landcov_res)
@@ -155,7 +155,7 @@ plot(bioclim_kept)
 
 In order to evaluate species distribution models with presence-only data, and really understand the factors influencing where *B.bipinnata*  occur, we need to include some absence or “background” points for coercing presence-only data for use with presence/absence approaches.
 
-we then create a set of 500 background (aka pseudo-absence) points at random, and add these to our data. For a large study region with a high resolution environmental data, think about trying 1000 or even 10,000 points.
+we then create a set of 500 background (i.e. pseudo-absence) points at random, and add these to our data. For a large study region with a high resolution environmental data, one can use 1,000 or even 10,000 pseudo-absences points.
 
 ```{r}
 # Set the seed for the random-number generator to ensure results are similar across users.
@@ -238,6 +238,12 @@ drop_cols
 # Remove the geographic coordinates from the data frame
 points_climate <- points_climate[, -drop_cols]
 ```
+
+We have to convert the alnd cover variable into a factor since it is a categorical variable.
+```{r}
+#points_climate$landcover <- as.factor(points_climate$landcover)
+```
+
 
 ### Training and testing data
 
