@@ -17,7 +17,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 This tutorial presents the workflow to build a Species Distribution Model (SDM) for *Bidens bipinnata*, the most abundant introduced species in Fogo Island in Cabo Verde (West Africa). 
 
-We used **RMarkdown**, a simple formatting syntax for authoring HTML, PDF, and MS Word documents (see <http://rmarkdown.rstudio.com>). When you click the **Knit** button, a document will be generated that includes both content and the output of any embedded R code chunks within the document.
+We used **RMarkdown**, a simple formatting syntax for authoring HTML, and MS Word and PDF documents (see <http://rmarkdown.rstudio.com>). So, when you click the **Knit** button, a document will be generated that includes both content and the output of any embedded R code chunks within the document.
+
+In the next section, we will describe the data we used for building the distribution model for *Bidens bipinnata* in Fogo Island.
 
 
 ## Description of the data
@@ -56,14 +58,14 @@ obs_data <- obs_data[!is.na(obs_data$latitude), ]
 summary(obs_data)
 ```
 
-After removing NAs, we create a spatial vector object using the UTM coordinate system. This will help us later when we need to overlay the species locations onto the Fogo Island map.
+After removing NAs, we create a spatial vector object using the UTM coordinate system. This will help us later when we need to overlay the species locations onto Fogo Island map.
 
 ```{r}
 obs_points <- vect(obs_data, geom = c("longitude", "latitude"), 
                    crs = "+proj=utm +zone=26 +datum=WGS84 +units=m")
 ```
 
-Then we project the vector data into long/lat to match it with the projection system of Fogo Island map and bioclimatic layers. Note that the climate data available in long/lat projection system will be downloaded in the next section.
+Then we project the vector data into *long/lat* reference system to match it with the projection system of Fogo Island map and bioclimatic layers. Note that the climate data available in long/lat projection system will be downloaded in the next section.
 
 ```{r}
 obs_points <- project(obs_points, "+proj=longlat +datum=WGS84")
@@ -88,7 +90,7 @@ points(x = geom(obs_points)[,"x"],
        cex = 0.8)
 ```
 
-Though our focus in this module is not mapping, readers can add legend, title and any other formatting elements relevant for understanding the species map.
+Though our focus in this module is not mapping, readers can add to the map above a legend, title and any other formatting elements relevant for its understanding.
 
 
 ### Environmental data
@@ -122,7 +124,7 @@ For simplicity purpose, we consider only three bioclimatic variables: annual tem
 bioclim_data <- c(bioclim_data$wc2.1_30s_bio_1, bioclim_data$wc2.1_30s_bio_12, bioclim_data$wc2.1_30s_bio_4)
 ```
 
-We extract bioclimatic variables using the geographic extent of Fogo Island. For other applications in which environmental variables are available beyond the study region, a study extent slightly larger than the study region is recommended. In this specific application, bioclimatic data are not available in the ocean around the Fogo Island. So there no need to include this area in the analysis.
+We extract bioclimatic variables using the geographic extent of Fogo Island. For other applications in which environmental variables are available beyond the study region, a study extent slightly larger than the study region is recommended. In this specific application, bioclimatic data are not available in the ocean around Fogo Island. So there no need to include this area in the analysis.
 
 ```{r}
 bioclim_crop <- crop(bioclim_data, map_fogo)
@@ -133,16 +135,16 @@ We can see that the resolution of the bioclimatic data which is about 0.00833333
 
 #### Land cover data
 
-Moreover, temperature and precipitation are well known to influence species distribution at large scale. However, at small scale like Fogo Island, other abiotic measurements like land cover may influence the species distribution. So, we have to load our **land cover** variable we created from the Module 2 to use it as a covariate in the species distribution model we are building for *B. bipinnata*.
+Moreover, temperature and precipitation are well known to influence species distribution at large scale. However, at small scale like Fogo Island, other abiotic measurements like land cover may influence the species distribution. So, we have to load our land cover* variable we created from the Module 2 to use it as a covariate in the species distribution model we are building for *B. bipinnata*.
 
 ```{r}
 landcov <- rast("env_data/landcover_model2.tif")
 plot(landcov)
 ```
 
-Since all the environmental variables should have the same projection system and resolution, we project the land cover variable into long/lat system and crop it to Fogo Island extent. However, we should be aware that the good practice is to project vector layers instead of raster layers due to the lack of precision associated with raster projection. So we recommend projecting a raster layer in another reference system as a last resort. 
+Since all the environmental variables should have the same projection system and resolution, we project the land cover variable into *long/lat* system and crop it to Fogo Island extent. However, we should be aware that the good practice is to project vector layers instead of raster layers due to the lack of precision associated with raster projection. So we recommend projecting a raster layer in another reference system as a last resort. 
 
-In the next chunk of code, we project the land cover map and extract its extent from Fogo Island map so that all environmental data have the same extent. Note that the `mask =TRUE` argument helps remove the Ocean around Fogo Island as there is no bioclimatic data available in that region. 
+In the next chunk of code, we project the land cover map and extract its extent from Fogo Island map so that all environmental data have the same extent. Note that the `mask = TRUE` argument helps remove the Ocean around Fogo Island as there is no bioclimatic data available in that region. 
 
 ```{r}
 landcov_ll <- project(landcov, "+proj=longlat +datum=WGS84", method ="near")
@@ -150,7 +152,7 @@ landcov_ll <- crop(landcov_ll, map_fogo, mask = TRUE)
 landcov_ll
 ```
 
-As we can see, the resolution of the land cover map is different from the one of bioclimatic data. So, we have to **resample** the land cover raster to the same resolution as the climatic data using the **near** interpolation method recommended for *categorical data*. Note that the resolution of bioclimatic data is lower than the original resolution of the land cover data. However, 30 arc-second resolution used in this study is the highest resolution available for bioclimatic data on the **Worldclim** website.
+As we can see, the resolution of the land cover map is different from the one of bioclimatic data. So, we have to *resample* the land cover raster to the same resolution as the climatic data using the *near* interpolation method recommended for *categorical variable*. Note that the resolution of bioclimatic data is lower than the original resolution of the land cover data. However, 30 arc-second resolution used in this study is the highest resolution available for bioclimatic data on the Worldclim website.
 
 ```{r}
 landcov_res <- resample(landcov_ll, bioclim_crop$wc2.1_30s_bio_1, method = "near")
@@ -283,7 +285,7 @@ Take a look at each split
 table(fold)
 ```
 
-We can use any observations in the fold 1 as test sample and the remaining folds as training set. A more robust approach is the **K-flod cross-validation** that we used in the module 2 for land cover classification. We encourage readers to test this approach and compare results with those from a single model training.
+We can use any observations in the fold 1 as test sample and the remaining folds as training set. A more robust approach is the *K-fold cross-validation* that we used in the Module 2 for land cover classification. We encourage readers to test this approach and compare results with those we obtained here.
 
 ```{r}
 testing  <- points_climate[fold == 1, ]
@@ -293,7 +295,7 @@ training <- points_climate[fold != 1, ]
 
 ## Model building
 
-Now, it is time to build our SDM. Several SDM approaches are available to handle presence-absence or presence-background data including generalized linear models (GLMs) and its variants, Maxent, tree-based methods (e.g. Random Forest). 
+Now, it is time to build our SDM. Several SDM approaches are available to handle presence-absence or presence-background data including generalized linear models (GLMs) and its variants, Maximum Entropy (Maxent), tree-based methods (e.g. Random Forest), etc. 
 
 In this study, we use the generalized linear model which is also known as binary logistic regression model, a popular approach used in machine learning. The column `pa` is the response variable while `"."`indicates to the `glm()` that all the the remaining columns should be considered as covariates in the model (i.e. bio1, bio4, bio12 and land cover).
 
@@ -308,7 +310,7 @@ After building the model, we can now view the results and look at the significan
 anova(glm_model)
 ```
 
-The ANOVA table from the model show that the temperature seasonalty and land cover variables have a significant effect on the probability of presence of *B. bipinnata*. The result aligns with those obtained from the analyses carried out in the Module 2 on land cover classification where we notice a significant variation of the amount of introduced species among land cover. 
+The ANOVA table from the model show that the temperature seasonality and land cover variables have a significant effect on the probability of presence of *B. bipinnata*. The result aligns with those obtained from the analyses carried out in the Module 2 on land cover classification where we notice a significant variation of the amount of introduced species among land cover. 
 
 After we have built our model, we can use it to predict the habitat suitability across the entire Fogo map. 
 
@@ -344,7 +346,7 @@ We determine a minimum threshold as the cutoff for converting the habitat suitab
 glm_threshold <- glm_eval@thresholds$max_spec_sens
 ```
 
-Finally, we can use that threshold to paint a map with sites predicted to be suitable for *Bidens bipinnata* in the Fogo Island. Raster cells with 0 are set to NA while those with 1 are colored on the final map. 
+Finally, we can use that threshold to paint a map with sites predicted to be suitable for *Bidens bipinnata* in Fogo Island. Raster cells with 0 are set to NA while those with 1 are colored on the final map. 
 
 ```{r}
 # Plot base map
@@ -373,11 +375,11 @@ plot(map_fogo, add = TRUE, border = "grey5")
 
 ## Conclusion and perspectives
 
-This tutorial presented a step-by-step workflow for building and evaluating Species Distribution Model in R using *Bidens bipinnata* species as a case study. It implemented the generalized linear model (GLM) to predict the probability of species occurrence in the Fogo Island. The tutorial used environmental data with different resolutions and projection systems to show learners how to handle such complexity within spatial data used for building SDM.
+This tutorial presented a step-by-step workflow for building and evaluating the Species Distribution Model in R using *Bidens bipinnata* plant species as a case study. It implemented the generalized linear model (GLM) to predict the probability of species occurrence in Fogo Island. The tutorial used environmental data with different resolutions and projection systems to show learners how to handle such complexity within spatial data used for building SDM.
 
-However, other algorithms including Generalized Additive Models (GAMs), Maximum Entropy (Maxent) and tree-based approaches are well known in the literature to implement SDMs using background points as absence data. We encourage readers to test different algorithms and select the best one based on performance metrics like the area under the ROC curve (AUC), accuracy, precision, etc.
+However, other algorithms including Generalized Additive Models (GAMs), Maxent and tree-based approaches are well known in the literature to implement SDMs using background points as absence data. We encourage readers to test different algorithms and select the best one based on performance metrics like the area under the ROC curve (AUC), accuracy, precision, etc.
 
-Recent developments on SDMs suggested to model a species distribution as an **Inhomogeneous Poisson Process (IPP)** which is implemented in the recent version of Maxent software. Technical aspects related to this modeling framework is beyond the scope of this tutorial and we recommend learners to read the paper of [Phillips et al. (2017)](https://onlinelibrary.wiley.com/doi/10.1111/ecog.03049) and references therein to have an idea about the IPP framework. 
+Recent developments on SDM suggested modeling a species distribution as an *Inhomogeneous Poisson Process (IPP)* which is implemented in the recent version of Maxent software. Technical aspects related to this modeling framework are beyond the scope of this tutorial and we recommend learners to read the paper of [Phillips et al. (2017)](https://onlinelibrary.wiley.com/doi/10.1111/ecog.03049) and references therein to have an idea about the IPP framework. 
 
 
 ## References
