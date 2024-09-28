@@ -22,7 +22,7 @@ We used **RMarkdown**, a simple formatting syntax for authoring HTML, PDF, and M
 
 ## Description of the data
 
-Two types of data have been used to build the SDM for *B. bipinnata*. They are occurrence and environmental data. The **occurrence data** are constituted of geographical coordinates (longitude and latitude) of the species. These data are the subset of the Fogo species data we used in the second Module of our learning materials. The **environmental data** represent descriptors of the environment, and can include abiotic measurements such as temperature, precipitation, soil types, and land cover as well as biotic factors, such as the presence or absence of other species (like predators, competitors, or food sources). In this tutorial, we will focus on climate data and land cover.
+Two types of data have been used to build the SDM for *B. bipinnata*. They are occurrence and environmental data. The **occurrence data** are constituted of geographical coordinates (longitude and latitude) of the species. These data are the subset of the Fogo species data we used in the second Module of our learning materials. The **environmental data** stand for descriptors of the environment, and can include abiotic measurements such as temperature, precipitation, soil types, and land cover as well as biotic factors, such as the presence or absence of other species (like predators, competitors, or food sources). In this tutorial, we will focus on climate data and land cover.
 
 
 ## Data preparation
@@ -56,28 +56,28 @@ obs_data <- obs_data[!is.na(obs_data$latitude), ]
 summary(obs_data)
 ```
 
-After removing NAs, we create a spatial vector object using the UTM coordinate system. This will help us later when we will need to overlay the species locations to the Fogo Island map.
+After removing NAs, we create a spatial vector object using the UTM coordinate system. This will help us later when we need to overlay the species locations onto the Fogo Island map.
 
 ```{r}
 obs_points <- vect(obs_data, geom = c("longitude", "latitude"), 
                    crs = "+proj=utm +zone=26 +datum=WGS84 +units=m")
 ```
 
-Then we project the vector data into long/lat to match it with the projection system of the Fogo Island map and bioclimatic layers. Note the climate data available in long/lat projection system will be downloaded in the next section.
+Then we project the vector data into long/lat to match it with the projection system of Fogo Island map and bioclimatic layers. Note that the climate data available in long/lat projection system will be downloaded in the next section.
 
 ```{r}
 obs_points <- project(obs_points, "+proj=longlat +datum=WGS84")
 ```
 
 
-Before proceeding, we should load the *Cabo Verde* map to visualize the observed species locations.
+Before proceeding, we should load Fogo Island map to visualize the observed species locations.
 
 ```{r}
 # Load the map of Cabo Verde available as a shapefile.
 map_fogo <- vect("gadm_cpv/fogo_island.shp")
 ```
 
-We can then plot the observed data on the Fogo map.
+We can then plot the observed data on the map.
 
 ```{r}
 plot(map_fogo, axes = TRUE, col = "grey95")
@@ -88,7 +88,7 @@ points(x = geom(obs_points)[,"x"],
        cex = 0.8)
 ```
 
-Though our focus in this module is not mapping, readers can add legend, title and any formatting elements relevant for the understanding of the species map.
+Though our focus in this module is not mapping, readers can add legend, title and any other formatting elements relevant for understanding the species map.
 
 
 ### Environmental data
@@ -116,13 +116,13 @@ if (!file.exists(data_path)) {
 }
 ```
 
-For simplicity purpose, we consider only three bioclimatic variables: annual temperature (bio1), temperature seasonality (bio4) and annual precipitation (bio12). However, we recommend learners of this module to explore variables selection techniques or use expert knowledge to come up with the potential environmental variables that could influence the distribution of the species of interest.
+For simplicity purpose, we consider only three bioclimatic variables: annual temperature (bio1), temperature seasonality (bio4) and annual precipitation (bio12). However, we recommend learners to explore variables selection techniques or use expert knowledge to come up with the potential environmental variables that could influence the distribution of the species of interest.
 
 ```{r}
 bioclim_data <- c(bioclim_data$wc2.1_30s_bio_1, bioclim_data$wc2.1_30s_bio_12, bioclim_data$wc2.1_30s_bio_4)
 ```
 
-We extract the bioclimatic variables using the geographic extent of Fogo Island. For other applications in which environmental variables are available beyond the study region, a study extent slightly larger than the study region is recommended. In this specific application, bioclimatic data are not available in the ocean around the Fogo Island. So there no need to include include in the analysis.
+We extract bioclimatic variables using the geographic extent of Fogo Island. For other applications in which environmental variables are available beyond the study region, a study extent slightly larger than the study region is recommended. In this specific application, bioclimatic data are not available in the ocean around the Fogo Island. So there no need to include this area in the analysis.
 
 ```{r}
 bioclim_crop <- crop(bioclim_data, map_fogo)
@@ -239,7 +239,7 @@ head(all_points)
 ```
 ### Adding climate data
 
-We will use the `extract()` function, which takes geographic coordinates and raster layers as input, and extract values in the raster data for each of the geographic coordinates.
+We use the `extract()` function, which takes geographic coordinates and raster layers as input, and extract values in the raster data for each of the geographic coordinates.
 
 ```{r}
 bioclim_extract <- extract(x = bioclim_kept,
@@ -295,19 +295,20 @@ training <- points_climate[fold != 1, ]
 
 Now, it is time to build our SDM. Several SDM approaches are available to handle presence-absence or presence-background data including generalized linear models (GLMs) and its variants, Maxent, tree-based methods (e.g. Random Forest). 
 
-In this study, we use the generalized linear model which is also known as binary logistic regression model, a popular approach used in machine learning. The column `pa` is the response variable while "." indicates to the `glm()` that all the the remaining columns should be considered as covariates in the model (i.e. bio1, bio4, bio12 and landcover).
+In this study, we use the generalized linear model which is also known as binary logistic regression model, a popular approach used in machine learning. The column `pa` is the response variable while `"."`indicates to the `glm()` that all the the remaining columns should be considered as covariates in the model (i.e. bio1, bio4, bio12 and land cover).
 
 ```{r}
 # Build a model using training data
 glm_model <- glm(pa ~ ., data = training, family = binomial())
 ```
 
-After building the model, we can now view the results and look at the significance of covariates.
+After building the model, we can now view the results and look at the significance of covariates.So we run the analysis of variance on the model object.
+
 ```{r}
 anova(glm_model)
 ```
 
-The ANOVA table from the model show that the temperature seasonalty and land cover variables have a significant effect on the probability of presence of *B. bipinnata*. The result aligns with those we obtained from the analyses carried out in the Module 2 on land cover classification where we notice a significant variation of the amount of introduced species among land cover. 
+The ANOVA table from the model show that the temperature seasonalty and land cover variables have a significant effect on the probability of presence of *B. bipinnata*. The result aligns with those obtained from the analyses carried out in the Module 2 on land cover classification where we notice a significant variation of the amount of introduced species among land cover. 
 
 After we have built our model, we can use it to predict the habitat suitability across the entire Fogo map. 
 
@@ -376,7 +377,7 @@ This tutorial presented a step-by-step workflow for building and evaluating Spec
 
 However, other algorithms including Generalized Additive Models (GAMs), Maximum Entropy (Maxent) and tree-based approaches are well known in the literature to implement SDMs using background points as absence data. We encourage readers to test different algorithms and select the best one based on performance metrics like the area under the ROC curve (AUC), accuracy, precision, etc.
 
-Recent developments on SDMs suggested to model a species distribution as an **Inhomogeneous Poisson Process (IPP)** which is implemented in the recent version of Maxent software. Technical aspects of this modeling framework is beyond the scope of this tutorial and we recommend the learners to read the paper of [Phillips et al. (2017)](https://onlinelibrary.wiley.com/doi/10.1111/ecog.03049) and references therein to have an idea about the IPP framework. 
+Recent developments on SDMs suggested to model a species distribution as an **Inhomogeneous Poisson Process (IPP)** which is implemented in the recent version of Maxent software. Technical aspects related to this modeling framework is beyond the scope of this tutorial and we recommend learners to read the paper of [Phillips et al. (2017)](https://onlinelibrary.wiley.com/doi/10.1111/ecog.03049) and references therein to have an idea about the IPP framework. 
 
 
 ## References
