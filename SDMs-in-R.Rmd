@@ -3,10 +3,10 @@ title: "Species Distribution Modeling in R"
 author: "Sode A.I., Olajide A.Y., Nakhwala L., Opara A., Opoku M., Barasa C.W."
 date: "2024-09-25"
 output:
-  word_document: default
-  pdf_document: default
-  html_document:
+  html_document: default
     df_print: paged
+  pdf_document: default
+  word_document: 
 ---
 
 ```{r setup, include=FALSE}
@@ -67,7 +67,7 @@ obs_points <- vect(obs_data, geom = c("longitude", "latitude"),
                    crs = "+proj=utm +zone=26 +datum=WGS84 +units=m")
 ```
 
-Then we project the vector data into *long/lat* reference system to match it with the projection system of Fogo Island map and bioclimatic layers. Note that the climate data available in long/lat projection system will be downloaded in the next section.
+Then we project the vector data into *long/lat* reference system to match it with the reference system of Fogo Island map and bioclimatic layers. Note that the climate data available in long/lat projection system will be downloaded in the next section.
 
 ```{r}
 obs_points <- project(obs_points, "+proj=longlat +datum=WGS84")
@@ -123,7 +123,7 @@ if (!file.exists(data_path)) {
 For simplicity purpose, we consider only three bioclimatic variables: annual temperature (bio1), temperature seasonality (bio4) and annual precipitation (bio12). However, we recommend learners to explore variables selection techniques or use expert knowledge to come up with the potential environmental variables that could influence the distribution of the species of interest.
 
 ```{r}
-bioclim_data <- c(bioclim_data$wc2.1_30s_bio_1, bioclim_data$wc2.1_30s_bio_12, bioclim_data$wc2.1_30s_bio_4)
+bioclim_data <- c(bioclim_data$wc2.1_30s_bio_1, bioclim_data$wc2.1_30s_bio_4, bioclim_data$wc2.1_30s_bio_12)
 ```
 
 We extract bioclimatic variables using the geographic extent of Fogo Island. For other applications in which environmental variables are available beyond the study region, a study extent slightly larger than the study region is recommended. In this specific application, bioclimatic data are not available in the ocean around Fogo Island. So there no need to include this area in the analysis.
@@ -273,7 +273,7 @@ Note that before proceeding, one can standardize numeric covariates to have the 
 
 ### Training and testing data
 
-After preparing our dataset for the model building, we are going to split it into training and test samples. So, we will use 80% of the data for training the model and 20% for testing it.
+After preparing our data for model building, we are going to split it into training and test samples. So, we will use 80% of the data for training the model and 20% for testing it.
 
 ```{r}
 # Create vector indicating fold
@@ -312,7 +312,7 @@ After building the model, we can now view the results and look at the significan
 anova(glm_model)
 ```
 
-The ANOVA table show that the temperature seasonality and land cover variables have a significant effect on the probability of presence of *B. bipinnata*. The result aligns with those obtained from the analyses carried out in the Module 2 on land cover classification where we notice a significant variation of the amount of introduced species among land cover. 
+The ANOVA table show that the temperature seasonality, precipitation and land cover classes have a significant effect on the probability of presence of *B. bipinnata* in Fogo Island. This result aligns with the one obtained from the analyses carried out in the Module 2 on land cover classification where we notice a significant variation of the amount of introduced species among land cover classes. 
 
 After we have built our model, we can use it to predict the habitat suitability across the entire Fogo Island map. 
 
@@ -324,7 +324,7 @@ glm_predict <- predict(bioclim_kept, glm_model, type = "response")
 plot(glm_predict, main = "Probability of occurrence of Bidens bipinnata")
 ```
 
-We can also predict the species distribution in the future using future climatic data. For more details see [Oliver (2024)](https://jcoliver.github.io/learn-r/011-species-distribution-models.html9).
+We can also forecast the species distribution in the future using future climatic data. For more details see [Oliver (2024)](https://jcoliver.github.io/learn-r/011-species-distribution-models.html9).
 
 
 ## Model evaluation
@@ -379,9 +379,9 @@ plot(map_fogo, add = TRUE, border = "grey5")
 
 This tutorial presented a step-by-step workflow for building and evaluating the Species Distribution Model in R using *Bidens bipinnata* plant species as a case study. It implemented the generalized linear model (GLM) to predict the probability of species occurrence in Fogo Island. The tutorial used environmental data with different resolutions and projection systems to show learners how to handle such complexity within spatial data used for building SDM.
 
-However, other algorithms including Generalized Additive Models (GAMs), Maxent and tree-based approaches are well known in the literature to implement SDMs using background points as absence data. We encourage readers to test different algorithms and select the best one based on performance metrics like the area under the ROC curve (AUC), accuracy, precision, etc. They can also use the *k-fold cross-validation* technique for building and testing the model.
+However, other algorithms including Generalized Additive Models (GAMs), Maxent and tree-based approaches are well known in the literature to implement SDMs using background points as absence data. We encourage readers to test different algorithms and select the best one based on performance metrics like the *area under the ROC curve (AUC), accuracy, precision, recall, etc*. They can also use the *k-fold cross-validation* technique for building and testing the model.
 
-Recent developments on SDM suggested modeling a species distribution as an *Inhomogeneous Poisson Process (IPP)* which is implemented in the recent version of Maxent software. Technical aspects related to this modeling framework are beyond the scope of this tutorial and we recommend learners to read the paper of [Phillips et al. (2017)](https://onlinelibrary.wiley.com/doi/10.1111/ecog.03049) and references therein to have an idea about the IPP framework. 
+Recent developments of SDM suggested modeling a species distribution as an *Inhomogeneous Poisson Process (IPP)* which is implemented in the recent version of Maxent software. Technical aspects related to this modeling framework are beyond the scope of this tutorial and we recommend learners to read the paper of [Phillips et al. (2017)](https://onlinelibrary.wiley.com/doi/10.1111/ecog.03049) and references therein to have an idea about the IPP framework. 
 
 
 ## References
