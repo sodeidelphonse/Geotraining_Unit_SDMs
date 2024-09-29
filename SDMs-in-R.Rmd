@@ -17,14 +17,16 @@ knitr::opts_chunk$set(echo = TRUE)
 
 This tutorial presents the workflow to build a Species Distribution Model (SDM) for *Bidens bipinnata*, the most abundant introduced species in Fogo Island in Cabo Verde (West Africa). 
 
-We used **RMarkdown**, a simple formatting syntax for authoring HTML, and MS Word and PDF documents (see <http://rmarkdown.rstudio.com>). So, when you click the **Knit** button, a document will be generated that includes both content and the output of any embedded R code chunks within the document.
+We used **RMarkdown**, a simple formatting syntax for authoring HTML, MS Word and PDF documents (see <http://rmarkdown.rstudio.com>). So, when you open the RMarkdown file and click the **Knit** button, a document will be generated that includes both content and the output of any embedded R code chunks within the document.
+
+The tutorial is built on the blog post of [Olivier 2024](https://jcoliver.github.io/learn-r/011-species-distribution-models.html9). However, we made major changes to the environmental data processing section as these data have different resolutions and projection systems.
 
 In the next section, we will describe the data we used for building the distribution model for *Bidens bipinnata* in Fogo Island.
 
 
 ## Description of the data
 
-Two types of data have been used to build the SDM for *B. bipinnata*. They are occurrence and environmental data. The **occurrence data** are constituted of geographical coordinates (longitude and latitude) of the species. These data are the subset of the Fogo species data we used in the second Module of our learning materials. The **environmental data** stand for descriptors of the environment, and can include abiotic measurements such as temperature, precipitation, soil types, and land cover as well as biotic factors, such as the presence or absence of other species (like predators, competitors, or food sources). In this tutorial, we will focus on climate data and land cover.
+Two data types have been used to build the SDM for *B. bipinnata*: occurrence and environmental data. The **occurrence data** are constituted of species' geographical coordinates (longitude and latitude). These data are the subset of the Fogo species data we used in the second Module of our learning materials. The **environmental data** stand for descriptors of the environment. They can include abiotic measurements such as temperature, precipitation, soil types, and land cover as well as biotic factors, such as the presence or absence of other species (like predators, competitors, or food sources). In this tutorial, we will focus on climate data and land cover.
 
 
 ## Data preparation
@@ -100,7 +102,7 @@ Though our focus in this module is not mapping, readers can add to the map above
 After we processed the field data, we are going to download the climate data from the `Worldclim` website <https://www.worldclim.org/>. 
 
 
-```{r, echo=FALSE}
+```{r}
 # the path where the data should be stored
 data_path <- "env_data/climate/wc2.1_country" 
 
@@ -130,19 +132,19 @@ We extract bioclimatic variables using the geographic extent of Fogo Island. For
 bioclim_crop <- crop(bioclim_data, map_fogo)
 bioclim_crop
 ```
-We can see that the resolution of the bioclimatic data which is about 0.008333333 (approximately 1 kilometer around the Ecuador). 
+We can see that the resolution of the bioclimatic data is `0.008333333` (approximately 1 kilometer at the Ecuador). 
 
 
 #### Land cover data
 
-Moreover, temperature and precipitation are well known to influence species distribution at large scale. However, at small scale like Fogo Island, other abiotic measurements like land cover may influence the species distribution. So, we have to load our land cover* variable we created from the Module 2 to use it as a covariate in the species distribution model we are building for *B. bipinnata*.
+Moreover, temperature and precipitation are well known to influence species distribution at large scale. However, at small scale like Fogo Island, other abiotic measurements like land cover may influence the species distribution. So, we have to load our land cover variable we created from the Module 2 to use it as a covariate in the species distribution model we are building for *B. bipinnata*.
 
 ```{r}
 landcov <- rast("env_data/landcover_model2.tif")
 plot(landcov)
 ```
 
-Since all the environmental variables should have the same projection system and resolution, we project the land cover variable into *long/lat* system and crop it to Fogo Island extent. However, we should be aware that the good practice is to project vector layers instead of raster layers due to the lack of precision associated with raster projection. So we recommend projecting a raster layer in another reference system as a last resort. 
+Since all the environmental variables should have the same projection system and resolution, we project the land cover variable into *long/lat* system and crop it to Fogo Island extent. However, we should be aware that the good practice is to project vector layers instead of raster layers due to the lack of precision associated with raster projection. So we recommend projecting a raster layer in another reference system if it is really necessary. 
 
 In the next chunk of code, we project the land cover map and extract its extent from Fogo Island map so that all environmental data have the same extent. Note that the `mask = TRUE` argument helps remove the Ocean around Fogo Island as there is no bioclimatic data available in that region. 
 
@@ -218,7 +220,7 @@ points(x = geom(obs_points)[,"x"],
 ```
 
 
-Now, we can create a single dataset for both occurrence and pseudo-absences data. We create an additional column to indicate each type of points.
+Now, we can create a single dataset for both occurrence and pseudo-absence data. We create an additional column to indicate each type of points.
 
 ```{r}
 # Presence-only data
@@ -266,12 +268,12 @@ drop_cols
 points_climate <- points_climate[, -drop_cols]
 ```
 
-Note that, one can standardize numeric covariates to have the same scale, in case the model includes many covariates. We encourage learners to think about this aspect in their future projects. In the next section, we will generate the training and test data for our SDM.
+Note that before proceeding, one can standardize numeric covariates to have the same scale, in case the model includes many covariates. We encourage learners to think about this aspect in their future projects. In the next section, we will generate the training and test data for our SDM.
 
 
 ### Training and testing data
 
-After preparing our dataset for the model building, we are going to split it into training and testing samples. We will 80% of the data for training the model and 20% for testing it.
+After preparing our dataset for the model building, we are going to split it into training and test samples. So, we will use 80% of the data for training the model and 20% for testing it.
 
 ```{r}
 # Create vector indicating fold
@@ -297,22 +299,22 @@ training <- points_climate[fold != 1, ]
 
 Now, it is time to build our SDM. Several SDM approaches are available to handle presence-absence or presence-background data including generalized linear models (GLMs) and its variants, Maximum Entropy (Maxent), tree-based methods (e.g. Random Forest), etc. 
 
-In this study, we use the generalized linear model which is also known as binary logistic regression model, a popular approach used in machine learning. The column `pa` is the response variable while `"."`indicates to the `glm()` that all the the remaining columns should be considered as covariates in the model (i.e. bio1, bio4, bio12 and land cover).
+In this study, we use the generalized linear model which is also known as binary logistic regression model, a popular modeling approach used in machine learning. The column `pa` is the response variable while `"."`indicates to the `glm()` function that all the the remaining columns should be considered as covariates in the model (i.e. bio1, bio4, bio12 and land cover).
 
 ```{r}
 # Build a model using training data
 glm_model <- glm(pa ~ ., data = training, family = binomial())
 ```
 
-After building the model, we can now view the results and look at the significance of covariates.So we run the analysis of variance on the model object.
+After building the model, we can now view the results and look at the significance of covariates. So we run the analysis of variance (ANOVA) on the model object.
 
 ```{r}
 anova(glm_model)
 ```
 
-The ANOVA table from the model show that the temperature seasonality and land cover variables have a significant effect on the probability of presence of *B. bipinnata*. The result aligns with those obtained from the analyses carried out in the Module 2 on land cover classification where we notice a significant variation of the amount of introduced species among land cover. 
+The ANOVA table show that the temperature seasonality and land cover variables have a significant effect on the probability of presence of *B. bipinnata*. The result aligns with those obtained from the analyses carried out in the Module 2 on land cover classification where we notice a significant variation of the amount of introduced species among land cover. 
 
-After we have built our model, we can use it to predict the habitat suitability across the entire Fogo map. 
+After we have built our model, we can use it to predict the habitat suitability across the entire Fogo Island map. 
 
 ```{r}
 # Get predicted values from the model
@@ -322,7 +324,7 @@ glm_predict <- predict(bioclim_kept, glm_model, type = "response")
 plot(glm_predict, main = "Probability of occurrence of Bidens bipinnata")
 ```
 
-We can also predict the species distribution in the future using future climatic data. For more details see Oliver (2024).
+We can also predict the species distribution in the future using future climatic data. For more details see [Oliver (2024)](https://jcoliver.github.io/learn-r/011-species-distribution-models.html9).
 
 
 ## Model evaluation
@@ -377,7 +379,7 @@ plot(map_fogo, add = TRUE, border = "grey5")
 
 This tutorial presented a step-by-step workflow for building and evaluating the Species Distribution Model in R using *Bidens bipinnata* plant species as a case study. It implemented the generalized linear model (GLM) to predict the probability of species occurrence in Fogo Island. The tutorial used environmental data with different resolutions and projection systems to show learners how to handle such complexity within spatial data used for building SDM.
 
-However, other algorithms including Generalized Additive Models (GAMs), Maxent and tree-based approaches are well known in the literature to implement SDMs using background points as absence data. We encourage readers to test different algorithms and select the best one based on performance metrics like the area under the ROC curve (AUC), accuracy, precision, etc.
+However, other algorithms including Generalized Additive Models (GAMs), Maxent and tree-based approaches are well known in the literature to implement SDMs using background points as absence data. We encourage readers to test different algorithms and select the best one based on performance metrics like the area under the ROC curve (AUC), accuracy, precision, etc. They can also use the *k-fold cross-validation* technique for building and testing the model.
 
 Recent developments on SDM suggested modeling a species distribution as an *Inhomogeneous Poisson Process (IPP)* which is implemented in the recent version of Maxent software. Technical aspects related to this modeling framework are beyond the scope of this tutorial and we recommend learners to read the paper of [Phillips et al. (2017)](https://onlinelibrary.wiley.com/doi/10.1111/ecog.03049) and references therein to have an idea about the IPP framework. 
 
