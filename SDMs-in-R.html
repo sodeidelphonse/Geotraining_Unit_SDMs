@@ -1637,14 +1637,14 @@ species in Fogo Island in Cabo Verde (West Africa).</p>
 <p>We used <strong>RMarkdown</strong>, a simple formatting syntax for
 authoring HTML, MS Word and PDF documents (see <a href="http://rmarkdown.rstudio.com" class="uri">http://rmarkdown.rstudio.com</a>). So, when you open the
 RMarkdown file and click the <strong>Knit</strong> button, a document
-will be generated that includes both content and the output of any
+will be generated. It includes both content and the output of any
 embedded R code chunks within the document.</p>
-<p>The tutorial is built on the blog publication of <a href="https://jcoliver.github.io/learn-r/011-species-distribution-models.html9">Olivier
-2024</a>. However, we made some major changes to the environmental data
-processing section as these data have different resolutions and
-projection systems.</p>
-<p>In the next section, we will describe the data we used for building
-the distribution model for <em>Bidens bipinnata</em> in Fogo Island.</p>
+<p>The tutorial is built on the blog publication of <a href="https://jcoliver.github.io/learn-r/011-species-distribution-models">Oliver
+(2024)</a>. However, we made some major changes to the environmental
+data processing section as these data have different resolutions and
+coordinate reference systems.</p>
+<p>In the next section, we will describe the data we used to build the
+distribution model for <em>Bidens bipinnata</em> on Fogo Island.</p>
 </div>
 <div id="description-of-the-data" class="section level2">
 <h2>Description of the data</h2>
@@ -1662,7 +1662,8 @@ will focus on climate data and land cover.</p>
 </div>
 <div id="data-preparation" class="section level2">
 <h2>Data preparation</h2>
-<p>Loading required R packages</p>
+<p>To prepare the data, we have to load the following R packages that
+should be installed in advance.</p>
 <pre class="r"><code>library(terra)</code></pre>
 <pre><code>## terra 1.7.78</code></pre>
 <pre class="r"><code>library(geodata)
@@ -1678,7 +1679,7 @@ head(obs_data)</code></pre>
 {"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["species"],"name":[1],"type":["chr"],"align":["left"]},{"label":["longitude"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["latitude"],"name":[3],"type":["dbl"],"align":["right"]}],"data":[{"1":"Bidens bipinnata","2":"781245.0","3":"1643415","_rn_":"1"},{"1":"Bidens bipinnata","2":"781200.6","3":"1643406","_rn_":"2"},{"1":"Bidens bipinnata","2":"781107.8","3":"1643438","_rn_":"3"},{"1":"Bidens bipinnata","2":"781091.3","3":"1643488","_rn_":"4"},{"1":"Bidens bipinnata","2":"781051.6","3":"1643561","_rn_":"5"},{"1":"Bidens bipinnata","2":"781117.0","3":"1643610","_rn_":"6"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
-<p>After loading the data, we get an overview about it. We notice 132
+<p>After loading the data, we get an overview of it. We notice 132
 records for the species occurrence.</p>
 <pre class="r"><code>summary(obs_data)</code></pre>
 <pre><code>##    species            longitude         latitude      
@@ -1688,27 +1689,20 @@ records for the species occurrence.</p>
 ##                     Mean   :781810   Mean   :1655529  
 ##                     3rd Qu.:784493   3rd Qu.:1661021  
 ##                     Max.   :791290   Max.   :1662071</code></pre>
-<p>We drop NAs (if applicable) and make sure they went way before
-proceeding. We can notice there is no NA.</p>
+<p>Our data has no NA in the latitude and longitude columns. However, ff
+there are NAs in the location columns, we can drop them out and make
+sure they went way before proceeding.</p>
 <pre class="r"><code>obs_data &lt;- obs_data[!is.na(obs_data$latitude), ]
-summary(obs_data)</code></pre>
-<pre><code>##    species            longitude         latitude      
-##  Length:132         Min.   :771175   Min.   :1642888  
-##  Class :character   1st Qu.:778956   1st Qu.:1649060  
-##  Mode  :character   Median :781090   Median :1658847  
-##                     Mean   :781810   Mean   :1655529  
-##                     3rd Qu.:784493   3rd Qu.:1661021  
-##                     Max.   :791290   Max.   :1662071</code></pre>
-<p>Now, we create a spatial vector object using the UTM coordinate
-system. This will help us later when we need to overlay the species
-locations onto Fogo Island map.</p>
+#summary(obs_data)</code></pre>
+<p>Now, we create a spatial vector object using the <em>UTM zone 26
+north</em> coordinate reference system (CRS). This will help us later to
+overlay the species locations onto Fogo Island map.</p>
 <pre class="r"><code>obs_points &lt;- vect(obs_data, geom = c(&quot;longitude&quot;, &quot;latitude&quot;), 
                    crs = &quot;+proj=utm +zone=26 +datum=WGS84 +units=m&quot;)</code></pre>
-<p>Then we project the vector data into <em>long/lat</em> reference
-system to match it with the reference system of Fogo Island map and
-bioclimatic layers. Note that bioclimatic data available in
-<em>long/lat</em> projection system will be downloaded in the next
-section.</p>
+<p>Then we reproject the vector data into <em>long/lat</em> CRS to match
+it with the CRS of Fogo Island map and bioclimatic layers. Note that
+bioclimatic data available in <em>long/lat</em> CRS will be downloaded
+in the next section.</p>
 <pre class="r"><code>obs_points &lt;- project(obs_points, &quot;+proj=longlat +datum=WGS84&quot;)</code></pre>
 <p>Before proceeding, we should load Fogo Island map to visualize the
 observed species locations.</p>
@@ -1760,7 +1754,7 @@ distribution of the species of interest.</p>
 Fogo Island. For other applications in which environmental variables are
 available beyond the study region, a study extent slightly larger than
 the study region is recommended. In this specific application,
-bioclimatic data are not available in the ocean around Fogo Island. So
+bioclimatic data are not available over the ocean around Fogo Island. So
 there no need to include this area in the analysis.</p>
 <pre class="r"><code>bioclim_crop &lt;- crop(bioclim_data, map_fogo)
 bioclim_crop</code></pre>
@@ -1791,10 +1785,10 @@ plot(landcov)</code></pre>
 <p>Since all the environmental variables should have the same projection
 system and resolution, we project the land cover variable into
 <em>long/lat</em> system and crop it to Fogo Island extent. However, you
-should be aware that the good practice is to project vector layers
-instead of raster layers due to the lack of precision associated with
-raster projection. So we recommend projecting a raster layer in another
-reference system if it is really necessary.</p>
+should be aware that the best practice is to project vector layers
+instead of raster layers due to the eventual alteration in some cells
+after raster projection. So we recommend reprojecting a raster layer in
+another CRS if it is really necessary.</p>
 <p>In the next chunk of code, we project the land cover map and crop its
 extent from Fogo Island map so that all environmental data have the same
 extent. Note that the <code>mask = TRUE</code> argument helps remove the
@@ -1931,7 +1925,7 @@ data for each of the geographic coordinates.</p>
 <pre class="r"><code>bioclim_extract &lt;- extract(x = bioclim_kept,
                            y = all_points[, c(&quot;longitude&quot;, &quot;latitude&quot;)],
                            ID = FALSE) </code></pre>
-<p>Now, we need to join the extracted data with points and drop out the
+<p>Now, we have to join the extracted data with points and drop out the
 longitude/latitude columns which are no longer relevant for the SDM
 implementation.</p>
 <pre class="r"><code># Add the point and climate datasets together
@@ -1945,15 +1939,15 @@ drop_cols </code></pre>
 points_climate &lt;- points_climate[, -drop_cols]</code></pre>
 <p>Note that before proceeding, one can standardize numeric covariates
 to have the same scale, especially when the model includes many
-covariates with different scales. We encourage learners to think about
-this aspect in their future projects. In the next section, we will
-generate the training and test data for our SDM.</p>
+covariates with different scales. We encourage you to think about this
+aspect in your future projects. In the next section, we will generate
+the training and test data for our SDM.</p>
 </div>
 <div id="training-and-testing-data" class="section level3">
 <h3>Training and testing data</h3>
 <p>After preparing our data for model building, we are going to split it
-into training and test samples. So, we will use 80% of the data for
-training the model and 20% for testing it.</p>
+into training and test samples. So, we use 80% of the data for training
+the model and 20% for testing it.</p>
 <pre class="r"><code># Create vector indicating fold
 fold &lt;- folds(x = points_climate,
               k = 5,
@@ -1978,13 +1972,13 @@ training &lt;- points_climate[fold != 1, ]</code></pre>
 available to handle presence-absence or presence-background data
 including generalized linear models (GLMs) and its variants, Maximum
 Entropy (Maxent), tree-based methods (e.g. Random Forest), etc.</p>
-<p>In this study, we use the a generalized linear model with
-<code>binomial()</code> family which is also known as logistic
+<p>In this study, we used a generalized linear model with
+<code>binomial()</code> family which is also known as the logistic
 regression model, a popular modeling approach used in machine learning.
 The column <code>pa</code> is the binary response variable while
-<code>&quot;.&quot;</code>indicates to the <code>glm()</code> function that all
-the the remaining columns should be considered as covariates in the
-model (i.e. bio1, bio4, bio12 and land cover).</p>
+<code>&quot;.&quot;</code> indicates to the <code>glm()</code> function that all
+the remaining columns (i.e. bio1, bio4, bio12 and land cover) should be
+considered as covariates in the model.</p>
 <pre class="r"><code># Build a model using training data
 glm_model &lt;- glm(pa ~ ., data = training, family = binomial())</code></pre>
 <p>After building the model, we can now view the results and look at the
@@ -1998,9 +1992,9 @@ on the model object.</p>
 </div>
 <p>The ANOVA table shows that temperature seasonality, precipitation,
 and land cover classes have a significant effect on the probability of
-presence of <em>B. bipinnata</em> in Fogo Island. This result aligns
-with the one obtained from the analyses carried out in the Module 2 on
-land cover classification where we notice a significant variation of the
+the presence of <em>B. bipinnata</em> on Fogo Island. This result aligns
+with the one obtained from the analyses carried out in Module 2 on land
+cover classification where we notice a significant variation of the
 amount of introduced species among land cover classes.</p>
 <p>After we have built our model, we can use it to predict the habitat
 suitability across the entire Fogo Island map.</p>
@@ -2033,19 +2027,19 @@ absence.</p>
 <pre class="r"><code># Determine minimum threshold for &quot;presence&quot;
 glm_threshold &lt;- glm_eval@thresholds$max_spec_sens</code></pre>
 <p>Finally, we can use that threshold to paint a map with sites
-predicted to be suitable for <em>Bidens bipinnata</em> in Fogo Island.
+predicted to be suitable for <em>Bidens bipinnata</em> on Fogo Island.
 Raster cells with 0 are set to NA while those with 1 are colored on the
 final map. After overlaying the observed points, we can see a few cells
 where the species was observed, but the model predicts them as
-unsuitable. This is known as <em>omission error</em> in machine
-learning.</p>
+unsuitable. This is known as <em>omission error</em> in the
+classification framework.</p>
 <pre class="r"><code># Plot base map
 plot(map_fogo, 
      axes = TRUE, 
      col = &quot;grey95&quot;,
      main = &quot;Habitat suitability for Bidens bipinnata&quot;)
 
-# Only plot areas where probability of occurrence is greater than the threshold
+# Only plot areas where the probability of occurrence is greater than the threshold
 plot(glm_predict &gt; glm_threshold, # this generates a raster with 0 and 1
      add = TRUE, 
      legend = FALSE, 
@@ -2065,12 +2059,12 @@ plot(map_fogo, add = TRUE, border = &quot;grey5&quot;)</code></pre>
 <div id="conclusion-and-perspectives" class="section level2">
 <h2>Conclusion and perspectives</h2>
 <p>This tutorial presented a step-by-step workflow for building and
-evaluating the Species Distribution Model in R using <em>Bidens
-bipinnata</em> plant species as a case study. It implemented the
-generalized linear model (GLM) to predict the <em>probability of species
+evaluating the Species Distribution Models (SDMs) in R using <em>Bidens
+bipinnata</em> plant species as a case study. It implemented generalized
+linear model (GLM) to predict the <em>probability of species
 occurrence</em> in Fogo Island. The tutorial used environmental data
 with different resolutions and projection systems to show you how to
-handle such complexity within spatial data used for building SDM.</p>
+handle such complexity within spatial data used for building SDMs.</p>
 <p>However, other algorithms including Generalized Additive Models
 (GAMs), Maxent and tree-based approaches are well known in the
 literature to implement SDMs using background points as absence data. We
@@ -2079,13 +2073,13 @@ on performance metrics like the <em>area under the ROC curve (AUC),
 accuracy, precision, recall, etc</em>. You can also use the <em>k-fold
 cross-validation</em> technique for building and testing your
 models.</p>
-<p>Note that recent developments of SDM suggested modeling a species
-distribution as an <em>Inhomogeneous Poisson Process (IPP)</em> which is
-implemented in the recent version of Maxent software. Technical aspects
-related to this modeling framework are beyond the scope of this tutorial
-and we recommend you to read the paper of <a href="https://onlinelibrary.wiley.com/doi/10.1111/ecog.03049">Phillips
-et al. (2017)</a> and references therein to have an idea about the IPP
-framework.</p>
+<p>Recent developments of SDM suggested modeling a species distribution
+as an <em>Inhomogeneous Poisson Process (IPP)</em> implemented in the
+recent version of Maxent software. Technical aspects related to this
+modeling framework are beyond the scope of this tutorial and we
+recommend you read the paper of <a href="https://onlinelibrary.wiley.com/doi/10.1111/ecog.03049">Phillips
+et al. (2017)</a> and the references therein to have an idea about the
+IPP framework.</p>
 </div>
 <div id="references" class="section level2">
 <h2>References</h2>
@@ -2093,7 +2087,7 @@ framework.</p>
 M.E., 2017. Opening the black box: an open‐source release of Maxent.
 Ecography 40, 887–893.<a href="https://doi.org/10.1111/ecog.03049" class="uri">https://doi.org/10.1111/ecog.03049</a>.</p>
 <p>Oliver, J., 2024. learn-r - A very brief introduction to species
-distribution models in R [WWW Document]. URL <a href="https://jcoliver.github.io/learn-r/011-species-distribution-models.html9" class="uri">https://jcoliver.github.io/learn-r/011-species-distribution-models.html9</a>
+distribution models in R [WWW Document]. URL <a href="https://jcoliver.github.io/learn-r/011-species-distribution-models" class="uri">https://jcoliver.github.io/learn-r/011-species-distribution-models</a>
 (accessed 9.25.24).</p>
 </div>
 
