@@ -1,5 +1,5 @@
 ---
-title: "Species Distribution Modeling in R"
+title: "Species Distribution Modelling in R: A Case Study of *Bidens bipinnata* on Fogo Island"
 author: "Sode A.I., Olajide A.Y., Nakhwala L., Opara A., Opoku M., Barasa C.W."
 date: "2024-09-25"
 output:
@@ -17,9 +17,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 This tutorial presents the workflow for building a Species Distribution Model (SDM) for *Bidens bipinnata*, the most abundant introduced species on Fogo Island, Cabo Verde (West Africa). 
 
-We used **RMarkdown**, a simple formatting syntax for authoring HTML, MS Word, and PDF documents (see <http://rmarkdown.rstudio.com>). So, when you open the RMarkdown file and click the **Knit** button, a document will be generated. It includes both content and the output of any embedded R code chunks within the document.
+The tutorial draws inspiration from [Oliver's (2024)](https://jcoliver.github.io/learn-r/011-species-distribution-models) work. However, we have made significant changes to the environmental data processing as these data have different resolutions and coordinate reference systems (CRS) in the present study.
 
-The tutorial is based on [Oliver's (2024)](https://jcoliver.github.io/learn-r/011-species-distribution-models) publication. However, we made major changes to the environmental data processing section as these data have different resolutions and coordinate reference systems.
+We used **R Markdown**, a simple formatting syntax for authoring HTML, MS Word, and PDF documents (see <http://rmarkdown.rstudio.com>). So, when you open the R Markdown file and click the **Knit** button, a document will be generated. It includes both content and the output of any embedded R code chunks within the document.
 
 In the next section, we will describe the data we used to build the distribution model for *Bidens bipinnata* on Fogo Island.
 
@@ -44,7 +44,7 @@ library(predicts)
 First, we load the occurrence data of *B. bipinnata* observed in Fogo Island.
 
 ```{r}
-obs_data <- read.csv(file = "occ_data/Bidens_bipinnata.csv")
+obs_data <- read.csv(file = "data_occ/Bidens_bipinnata.csv")
 head(obs_data)
 ```
 
@@ -104,7 +104,7 @@ After we processed the field data, we are going to download the climate data fro
 
 ```{r}
 # the path where the data should be stored
-data_path <- "env_data/climate/wc2.1_country" 
+data_path <- "data_env/climate/wc2.1_country" 
 
 # Check if the data already exists
 if (!file.exists(data_path)) {
@@ -112,7 +112,7 @@ if (!file.exists(data_path)) {
   message("Climate data not found, downloading...")
   bioclim_data <- worldclim_country(country = "cabo verde", var = "bio",
                                    res = 0.5,
-                                   path = "env_data/")
+                                   path = "data_env/")
 } else {
   # data exists, load it and proceed
   message("Climate data already exists, proceeding...")
@@ -140,7 +140,7 @@ We can see that the resolution of the bioclimatic data is `0.008333333` (approxi
 Temperature and precipitation are well known to influence species distribution at large scale. However, at small scale like Fogo Island, other abiotic measurements like land cover may influence the species distribution. So, we have to load our land cover layer we created from Module 2 to use it as a covariate in the species distribution model we are building for *B. bipinnata*.
 
 ```{r}
-landcov <- rast("env_data/landcover_model2.tif")
+landcov <- rast("data_env/landcover_model2.tif")
 plot(landcov)
 ```
 
