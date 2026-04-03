@@ -4,7 +4,7 @@ author: "Sode A.I., Olajide A.Y., Nakhwala L., Opara A., Opoku M., Barasa C.W."
 date: "2024-09-25"
 output:
   word_document: default
-  pdf_document: 
+  pdf_document:
   html_document: 
     df_print: paged
 ---
@@ -15,11 +15,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction
 
-This tutorial presents the workflow to build a Species Distribution Model (SDM) for *Bidens bipinnata*, the most abundant introduced species in Fogo Island in Cabo Verde (West Africa). 
+This tutorial presents the workflow for building a Species Distribution Model (SDM) for *Bidens bipinnata*, the most abundant introduced species on Fogo Island, Cabo Verde (West Africa). 
 
 We used **RMarkdown**, a simple formatting syntax for authoring HTML, MS Word, and PDF documents (see <http://rmarkdown.rstudio.com>). So, when you open the RMarkdown file and click the **Knit** button, a document will be generated. It includes both content and the output of any embedded R code chunks within the document.
 
-The tutorial is built on the blog publication of [Oliver (2024)](https://jcoliver.github.io/learn-r/011-species-distribution-models). However, we made some major changes to the environmental data processing section as these data have different resolutions and coordinate reference systems.
+The tutorial is based on [Oliver's (2024)](https://jcoliver.github.io/learn-r/011-species-distribution-models) publication. However, we made major changes to the environmental data processing section as these data have different resolutions and coordinate reference systems.
 
 In the next section, we will describe the data we used to build the distribution model for *Bidens bipinnata* on Fogo Island.
 
