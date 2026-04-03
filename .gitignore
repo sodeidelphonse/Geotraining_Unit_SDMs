@@ -2,4 +2,5 @@
 .Rhistory
 .RData
 .Ruserdata
-.env_data
+data_env/climate
+SDMs-in-R.docx
